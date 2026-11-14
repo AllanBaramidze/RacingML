@@ -5,13 +5,18 @@ import arcade
 CAR_COLORS = [
     arcade.color.BLUE
 ]
+TYRE_COLORS = [
+    arcade.color.RED,
+    arcade.color.YELLOW,
+    arcade.color.GREEN,
+]
 
 class Car:
     def __init__(self, x, y):
         self.x = x
         self.y = y
         self.color = random.choice(CAR_COLORS)
-        self.radius = 6
+        self.radius = 10
         self.speed = 50
 
     def move_toward(self, target_x, target_y, delta_time):
@@ -33,7 +38,7 @@ class Car:
         self.y += dy / distance * step
 
     def draw(self):
-        arcade.draw_circle_filled(self.x, self.y, self.radius + 2, arcade.color.WHITE)
-        arcade.draw_circle_filled(self.x, self.y, self.radius, self.color)
+        arcade.draw_circle_filled(self.x, self.y, self.radius + 2, arcade.color.WHITE) # Outer
+        arcade.draw_circle_filled(self.x, self.y, self.radius, self.color) # Inner
 
 
