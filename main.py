@@ -3,9 +3,12 @@ from operator import contains
 import arcade
 import math
 from car import Car
+from track import Track
+from controllers import KeyboardController
 
 WHITE_CUTOFF = 200
-START_X, START_Y = 650, 185
+START_X, START_Y = 770, 182
+LINE = 1
 EDGE_POINTS = 8
 WINDOW_WIDTH = 1600
 WINDOW_HEIGHT = 800
@@ -23,82 +26,54 @@ class GameView(arcade.View):
 
     def __init__(self):
         super().__init__()
-        self.background = arcade.load_texture("Track.png")
-        self.car = Car(770, 182)
-        self.target_x = self.car.x
-        self.target_y = self.car.y
+        self.track = Track(WINDOW_WIDTH, WINDOW_HEIGHT, "Track.png", WHITE_CUTOFF, EDGE_POINTS)
+        self.car = Car(START_X, START_Y)
+        self.controller = KeyboardController()
         self.pixel_color = (0, 0, 0, 0)
         self.seconds_alive = 0
         arcade.schedule(self.tick, 0.01)
         self.timer_text = arcade.Text("", 10, WINDOW_HEIGHT - 30, arcade.color.BLACK, 16)
         self.color_text = arcade.Text("", 10, WINDOW_HEIGHT - 50, arcade.color.BLACK, 16)
         self.coords_text = arcade.Text("", 10, WINDOW_HEIGHT - 70, arcade.color.BLACK, 16)
+        self.speed_text = arcade.Text("", 10, WINDOW_HEIGHT - 90, arcade.color.BLACK, 16)
+        self.tyre_health = arcade.Text("", 10, WINDOW_HEIGHT - 110, arcade.color.BLACK, 16)
 
     def tick(self, delta_time):
         self.seconds_alive += delta_time
         # print(self.seconds_alive)
 
-    def is_white(self, color):  # NEW
-        return color[0] > WHITE_CUTOFF
-
-    def touching_white(self):
-        r = self.car.radius + 2  # outer edge = the white ring
-        for i in range(EDGE_POINTS):
-            a = 2 * math.pi * i / EDGE_POINTS  # angle of this point
-            x = self.car.x + r * math.cos(a)  # point on the circle
-            y = self.car.y + r * math.sin(a)
-            if self.is_white(self.get_pixel_color(x, y)):
-                return True
-        return False
 
     def reset(self):
-        self.car.x = START_X
-        self.car.y = START_Y
-        self.target_x = START_X  # or it drives off again
-        self.target_y = START_Y
+        self.car.reset(START_X, START_Y)
         self.seconds_alive = 0
 
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
-        self.target_x = x
-        self.target_y = y
+    def on_key_press(self, symbol: int, modifiers: int):
+        self.controller.on_key_press(symbol)
 
+    def on_key_release(self, symbol: int, modifiers: int):
+        self.controller.on_key_release(symbol)
 
     def on_update(self, delta_time: float):
-        self.car.move_toward(self.target_x, self.target_y, delta_time)
-        self.pixel_color = self.get_pixel_color(self.car.x, self.car.y)
-        if self.touching_white() == True: # Loop reset
+        inputs = self.controller.get_inputs()
+        self.car.update(inputs, delta_time)
+        if self.track.touching_white(self.car.x, self.car.y, self.car.radius):
             self.reset()
-        else:
-            pass
-
-
-
-    def get_pixel_color(self, x, y):
-        img_w = self.background.width
-        img_h = self.background.height
-
-        px = x / WINDOW_WIDTH * img_w
-        py = img_h - y * img_h / WINDOW_HEIGHT
-
-        px = max(0, min(img_w - 1, int(px)))
-        py = max(0, min(img_h - 1, int(py)))
-        return self.background.image.getpixel((px, py))
 
 
     def on_draw(self):
-        # Arcade calls this every frame. Without it, nothing is drawn.
-        self.clear()  # wipe the previous frame
-        arcade.draw_texture_rect(
-            self.background,
-            arcade.LBWH(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT),
-        )
+        self.clear()
+        self.track.on_draw()
         self.car.draw()
         self.timer_text.text = f"alive: {self.seconds_alive:.2f}s"
         self.timer_text.draw()
-        self.color_text.text = f"color: {self.get_pixel_color(self.car.x, self.car.y)}"
+        self.color_text.text = f"color: {self.track.get_pixel_on_image(self.car.x, self.car.y)}"
         self.color_text.draw()
         self.coords_text.text = f"coords: x: {self.car.x}, y: {self.car.y}"
         self.coords_text.draw()
+        self.speed_text.text = f"speed: {self.car.speed}"
+        self.speed_text.draw()
+        self.tyre_health.text = f"tyre: {self.car.tyre.health:.0f}"
+        self.tyre_health.draw()
 
 
 
